@@ -1,144 +1,75 @@
 # Fan Fiction Generator
 
-A web application that helps users create fan fiction stories using AI, with support for reference material grounding through PDF and text file uploads. Built for deployment on Replit.
+A small retrieval-augmented generation (RAG) app: describe a story, optionally point it at reference passages stored in a Pinecone index, and an LLM writes a story grounded in that material.
 
-## 🌟 Features
+Built with Next.js, LangChain (`@langchain/openai`), and the Pinecone vector database.
 
-- 📝 Interactive story generation interface
-- 🎭 Multiple genre selection and blending
-- 📚 Reference material upload support (PDF and TXT files)
-- 🤖 AI-powered story generation
-- 📱 Responsive design for mobile and desktop
-- 🔍 Vector search integration for context-aware writing
+## How it works
 
-## 🚀 Replit Deployment
-
-### Quick Start
-1. Visit [Replit](https://replit.com)
-2. Click "Create Repl"
-3. Choose "Import from GitHub"
-4. Paste your repository URL
-5. Select "Node.js" as the language
-
-### Environment Setup
-1. In your Repl, click on "Tools" in the left sidebar
-2. Select "Secrets"
-3. Add the following secrets:
 ```
-OPENAI_API_KEY=your_openai_api_key
-PINECONE_API_KEY=your_pinecone_api_key
-PINECONE_ENVIRONMENT=your_pinecone_environment
-PINECONE_INDEX=your_pinecone_index_name
+Browser form (components/StoryForm.js)
+   │  title, genres, description, reference text, optional fileIds
+   ▼
+POST /api/generate (pages/api/generate.js)
+   │  1. fetch reference records from Pinecone by id  (lib/pinecone.js)
+   │  2. merge them with the user's inputs into a single context block
+   │  3. prompt GPT-4 via LangChain with that context
+   ▼
+Generated story returned as JSON and rendered in the page
 ```
 
-### Development
-1. The Repl will automatically install dependencies
-2. Click "Run" to start the development server
-3. Your app will be available at your Repl's URL
+Grounding text is read from each Pinecone record's `metadata.content`. The app does not ingest documents itself. Populate the index separately (for example, with a script that chunks your source text and upserts it with a `content` metadata field).
 
-### Production Deployment
-1. Replit will automatically build and deploy your app
-2. Your production URL will be available in the "Deploy" tab
+## Project structure
 
-## 📁 Supported File Types
-
-- PDF (.pdf)
-- Text files (.txt)
-
-Maximum file size: 10MB per file
-
-## 🛠️ Tech Stack
-
-- Frontend:
-  - React
-  - Tailwind CSS
-  - shadcn/ui components
-  - Lucide Icons
-- Backend:
-  - Node.js
-  - OpenAI API
-  - Pinecone Vector DB
-  - LangChain
-- Deployment:
-  - Replit
-  - Node.js 18.x
-
-## 🔧 Replit-Specific Configuration
-
-### File Structure
 ```
 .
-├── .replit                 # Replit configuration
-├── replit.nix             # Nix environment config
-├── components/            # React components
-├── pages/                 # Next.js pages
-│   ├── api/              # API routes
-│   └── index.js          # Main page
-├── public/               # Static files
-└── package.json          # Dependencies
+├── components/StoryForm.js   # input form + result display
+├── lib/pinecone.js           # lazily-initialised Pinecone index client
+├── pages/
+│   ├── _app.js
+│   ├── index.js              # main page
+│   └── api/generate.js       # retrieval + generation endpoint
+├── styles/globals.css        # Tailwind entry point
+├── .replit / replit.nix      # Replit configuration
+└── package.json
 ```
 
-### Running Locally
-To run the project locally on Replit:
-1. Fork the Repl
-2. Add your environment variables
-3. Click "Run"
+## Running locally
 
-### Troubleshooting Replit Deployment
-Common issues and solutions:
-1. **Build Fails**
-   - Check Node.js version in replit.nix
-   - Verify all dependencies are in package.json
-   - Clear .next directory and rebuild
-
-2. **Environment Variables**
-   - Ensure all secrets are properly set
-   - Check for typos in variable names
-   - Verify API keys are valid
-
-3. **File Upload Issues**
-   - Verify tmp directory permissions
-   - Check file size limits
-   - Ensure proper CORS configuration
-
-## 📋 Development Commands
+Requires Node.js 18+.
 
 ```bash
-# Install dependencies
+git clone https://github.com/dsmflow/fan-fiction.git
+cd fan-fiction
 npm install
-
-# Run development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
 ```
 
-## 🔒 Security Considerations
+Create `.env.local`:
 
-- API keys are stored securely in Replit Secrets
-- File uploads are validated server-side
-- Rate limiting is implemented for API endpoints
-- CORS is configured for security
+```
+OPENAI_API_KEY=...
+PINECONE_API_KEY=...
+PINECONE_INDEX=...
+```
 
-## 🤝 Contributing
+Then:
 
-1. Fork the Repl
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
+```bash
+npm run dev      # http://localhost:3000
+npm run build && npm start   # production build
+```
 
-## 👥 Support
+## Running on Replit
 
-For support:
-1. Open an issue in the GitHub repository
-2. Post in the Replit community forums
-3. Contact [your-email@example.com]
+Import the repository into Replit, add the three variables above under **Tools → Secrets**, and click **Run**. `.replit` starts `npm run dev`.
 
-## 📄 License
+## Possible next steps
 
-See the [LICENSE](LICENSE) file for details
+- An upload endpoint that chunks PDF/TXT files, embeds them, and upserts them to Pinecone
+- Similarity search (`index.query`) on the story description instead of fetch-by-id
+- Streaming responses
+
+## License
+
+MIT. See [LICENSE](LICENSE).

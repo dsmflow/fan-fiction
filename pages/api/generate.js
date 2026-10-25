@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     let referenceContexts = [];
     if (fileIds?.length > 0) {
       const queryResponse = await index.fetch(fileIds);
-      referenceContexts = queryResponse.records.map(record => record.metadata.content);
+      referenceContexts = Object.values(queryResponse.records).map(record => record.metadata?.content).filter(Boolean);
     }
 
     const fullContext = `
